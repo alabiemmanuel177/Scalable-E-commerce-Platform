@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { CreatePaymentDto } from './dto/create-payment.dto';
-import { UpdatePaymentDto } from './dto/update-payment.dto';
+import { Injectable, HttpService } from '@nestjs/common';
+import {
+  CreatePaymentDto,
+  CreateTransactionDto,
+} from './dto/create-payment.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment } from './entities/payment.entity';
@@ -8,29 +10,69 @@ import { Transaction } from './entities/transaction.entity';
 
 @Injectable()
 export class PaymentService {
+  private readonly PAYSTACK_API_URL = 'https://api.paystack.co';
+
   constructor(
     @InjectRepository(Payment)
     private paymentRepository: Repository<Payment>,
     @InjectRepository(Transaction)
     private transactionRepository: Repository<Transaction>,
+    private httpService: HttpService,
   ) {}
-  create(createPaymentDto: CreatePaymentDto) {
-    return 'This action adds a new payment';
+  findOne(id: number): Promise<Payment> {
+    return this.paymentRepository.findOne({
+      where: { id },
+      relations: ['transactions'],
+    });
   }
 
-  findAll() {
-    return `This action returns all payment`;
+  async create(createPaymentDto: CreatePaymentDto): Promise<Payment> {
+    const payment = this.paymentRepository.create(createPaymentDto);
+    await this.paymentRepository.save(payment);
+
+    // Initiate the payment with Paystack
+    const response = await this.httpService
+      .post(
+        `${this.PAYSTACK_API_URL}/transaction/initialize`,
+        {
+          email: createPaymentDto.email,
+          amount: createPaymentDto.amount * 100,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          },
+        },
+      )
+      .toPromise();
+
+    if (response.data.status) {
+      // Save the transaction details
+      const transaction = new Transaction();
+      transaction.payment = payment;
+      transaction.status = 'initialized';
+      transaction.timestamp = new Date();
+      await this.transactionRepository.save(transaction);
+
+      return {
+        ...payment,
+        authorization_url: response.data.data.authorization_url,
+      };
+    } else {
+      throw new Error('Payment initialization failed');
+    }
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} payment`;
-  }
-
-  update(id: number, updatePaymentDto: UpdatePaymentDto) {
-    return `This action updates a #${id} payment`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} payment`;
+  async createTransaction(
+    paymentId: number,
+    createTransactionDto: CreateTransactionDto,
+  ): Promise<Transaction> {
+    const transaction = this.transactionRepository.create({
+      ...createTransactionDto,
+      payment: await this.paymentRepository.findOne({
+        where: { id: paymentId },
+      }),
+    });
+    return this.transactionRepository.save(transaction);
   }
 }

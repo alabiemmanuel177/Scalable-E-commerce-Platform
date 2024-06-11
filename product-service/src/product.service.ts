@@ -17,23 +17,34 @@ export class ProductService {
     @InjectRepository(Inventory)
     private inventoryRepository: Repository<Inventory>,
   ) {}
-  create(createProductDto: CreateProductDto) {
-    return 'This action adds a new product';
+  findAll(): Promise<Product[]> {
+    return this.productRepository.find({ relations: ['category'] });
   }
 
-  findAll() {
-    return `This action returns all product`;
+  findOne(id: number): Promise<Product> {
+    return this.productRepository.findOne({
+      where: { id },
+      relations: ['category'],
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} product`;
+  create(createProductDto: CreateProductDto): Promise<Product> {
+    const product = this.productRepository.create(createProductDto);
+    return this.productRepository.save(product);
   }
 
-  update(id: number, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
+  async update(
+    id: number,
+    updateProductDto: UpdateProductDto,
+  ): Promise<Product> {
+    await this.productRepository.update(id, updateProductDto);
+    return this.productRepository.findOne({
+      where: { id },
+      relations: ['category'],
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} product`;
+  async remove(id: number): Promise<void> {
+    await this.productRepository.delete(id);
   }
 }
