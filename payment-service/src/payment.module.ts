@@ -4,20 +4,22 @@ import { PaymentController } from './payment.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Payment } from './entities/payment.entity';
 import { Transaction } from './entities/transaction.entity';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'postgres',
-      host: 'localhost',
+      host: 'db',
       port: 5432,
       username: 'postgres',
       password: 'password',
-      database: 'product_db',
+      database: 'main_db',
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true,
     }),
     TypeOrmModule.forFeature([Payment, Transaction]),
+    HttpModule,
   ],
   controllers: [PaymentController],
   providers: [PaymentService],

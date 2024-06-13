@@ -1,6 +1,7 @@
 export class CreatePaymentDto {
-  readonly orderId: number;
+  readonly email: string;
   readonly amount: number;
+  readonly orderId: number; // Include the orderId here
 }
 
 export class CreateTransactionDto {

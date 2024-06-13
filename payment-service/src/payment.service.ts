@@ -1,4 +1,5 @@
-import { Injectable, HttpService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
 import {
   CreatePaymentDto,
   CreateTransactionDto,
@@ -7,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Payment } from './entities/payment.entity';
 import { Transaction } from './entities/transaction.entity';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class PaymentService {
@@ -19,6 +21,7 @@ export class PaymentService {
     private transactionRepository: Repository<Transaction>,
     private httpService: HttpService,
   ) {}
+
   findOne(id: number): Promise<Payment> {
     return this.paymentRepository.findOne({
       where: { id },
@@ -26,13 +29,13 @@ export class PaymentService {
     });
   }
 
-  async create(createPaymentDto: CreatePaymentDto): Promise<Payment> {
+  async create(createPaymentDto: CreatePaymentDto): Promise<any> {
     const payment = this.paymentRepository.create(createPaymentDto);
     await this.paymentRepository.save(payment);
 
     // Initiate the payment with Paystack
-    const response = await this.httpService
-      .post(
+    const response = await lastValueFrom(
+      this.httpService.post(
         `${this.PAYSTACK_API_URL}/transaction/initialize`,
         {
           email: createPaymentDto.email,
@@ -43,8 +46,8 @@ export class PaymentService {
             Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
           },
         },
-      )
-      .toPromise();
+      ),
+    );
 
     if (response.data.status) {
       // Save the transaction details
@@ -53,6 +56,10 @@ export class PaymentService {
       transaction.status = 'initialized';
       transaction.timestamp = new Date();
       await this.transactionRepository.save(transaction);
+
+      // Update payment entity to include the authorization_url if required
+      payment.authorization_url = response.data.data.authorization_url;
+      await this.paymentRepository.save(payment);
 
       return {
         ...payment,

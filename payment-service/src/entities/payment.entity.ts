@@ -12,6 +12,9 @@ export class Payment {
   @Column()
   amount: number;
 
+  @Column({ nullable: true })
+  authorization_url?: string;
+
   @OneToMany(() => Transaction, (transaction) => transaction.payment)
   transactions: Transaction[];
 }

@@ -7,7 +7,6 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { Role } from './entities/role.entity';
 import { UserProfile } from './entities/user-profile.entity';
 import { User } from './entities/user.entity';
-import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -19,7 +18,6 @@ export class UserService {
     private roleRepository: Repository<Role>,
     @InjectRepository(UserProfile)
     private userProfileRepository: Repository<UserProfile>,
-    private readonly jwtService: JwtService,
   ) {}
   async findById(id: number): Promise<User> {
     return this.userRepository.findOne({
@@ -53,13 +51,6 @@ export class UserService {
       return user;
     }
     return null;
-  }
-
-  async login(user: User): Promise<{ accessToken: string }> {
-    const payload = { username: user.username, sub: user.id };
-    return {
-      accessToken: this.jwtService.sign(payload),
-    };
   }
 
   async createOAuthUser(profile: any): Promise<User> {

@@ -44,7 +44,8 @@ export class ProductService {
     });
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number): Promise<{ message: string }> {
     await this.productRepository.delete(id);
+    return { message: 'Product deleted successfully' };
   }
 }
