@@ -1,12 +1,16 @@
 services:
   product-service:
     build:
-      context: ./product-service
+      context: ./services/product-service
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./services/product-service:/usr/src/app
+      - /usr/src/app/node_modules
     ports:
       - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgres://postgres:password@db:5432/main_db
+    env_file:
+      - .env
     depends_on:
       - db
     networks:
@@ -14,12 +18,16 @@ services:
 
   user-service:
     build:
-      context: ./user-service
+      context: ./services/user-service
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./services/user-service:/usr/src/app
+      - /usr/src/app/node_modules
     ports:
       - "3001:3001"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgres://postgres:password@db:5432/main_db
+    env_file:
+      - .env
     depends_on:
       - db
     networks:
@@ -27,12 +35,16 @@ services:
 
   order-service:
     build:
-      context: ./order-service
+      context: ./services/order-service
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./services/order-service:/usr/src/app
+      - /usr/src/app/node_modules
     ports:
       - "3002:3002"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgres://postgres:password@db:5432/main_db
+    env_file:
+      - .env
     depends_on:
       - db
     networks:
@@ -40,20 +52,23 @@ services:
 
   payment-service:
     build:
-      context: ./payment-service
+      context: ./services/payment-service
+      dockerfile: Dockerfile
+      target: development
+    volumes:
+      - ./services/payment-service:/usr/src/app
+      - /usr/src/app/node_modules
     ports:
       - "3003:3003"
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgres://postgres:password@db:5432/main_db
-      - PAYSTACK_SECRET_KEY=your_paystack_secret_key
+    env_file:
+      - .env
     depends_on:
       - db
     networks:
       - microservices-network
 
   db:
-    image: postgres:12
+    image: postgres:16.3
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
@@ -65,7 +80,6 @@ services:
 
 volumes:
   postgres_data:
-
 
 networks:
   microservices-network:
